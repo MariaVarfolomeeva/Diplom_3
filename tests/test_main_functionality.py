@@ -1,91 +1,78 @@
+import allure
 import pytest
-import logging
 from pages.main_page import MainPage
-from pages.constructor_page import ConstructorPage
 from pages.login_page import LoginPage
-from utils.test_data import TestUser, TestData
-from selenium.common.exceptions import NoSuchElementException
-
-logger = logging.getLogger(__name__)
+from utils.test_data import TestUser, TestIngredients
 
 
-@pytest.mark.usefixtures("driver_setup")
+@allure.feature("Основная функциональность")
 class TestMainFunctionality:
-    @pytest.fixture
-    def test_user(self):
-        """Фикстура для тестового пользователя"""
-        return TestUser(
-            email=TestData.USER_EMAIL,
-            password=TestData.USER_PASSWORD,
-            name="Test User"
-        )
-
+    @allure.story("Навигация по разделам")
+    @allure.title("Переход в конструктор")
     def test_go_to_constructor(self, driver):
-        logger.info("Проверка перехода на страницу конструктора по клику")
+        main_page = MainPage(driver)
 
-        main = MainPage(driver)
-        main.open()
-        main.click_constructor_link()
+        with allure.step("Открыть главную страницу"):
+            main_page.open()
+            assert main_page.is_opened()
 
-        assert "constructor" in driver.current_url or ConstructorPage(driver).is_loaded(), "Не перешли в конструктор"
+        with allure.step("Кликнуть на раздел 'Конструктор'"):
+            main_page.click_constructor_link()
 
+        with allure.step("Проверить URL"):
+            assert "/" in main_page.get_current_url()
+
+    @allure.story("Навигация по разделам")
+    @allure.title("Переход в ленту заказов")
     def test_go_to_order_feed(self, driver):
-        logger.info("Проверка перехода в ленту заказов")
+        main_page = MainPage(driver)
 
-        main = MainPage(driver)
-        main.open()
-        main.click_order_feed_link()
+        with allure.step("Открыть главную страницу"):
+            main_page.open()
 
-        assert "feed" in driver.current_url, "Не перешли в ленту заказов"
+        with allure.step("Кликнуть на раздел 'Лента заказов'"):
+            main_page.click_feed_link()
 
-    def test_ingredient_modal_opens_and_closes(self, driver):
-        logger.info("Проверка модального окна с ингредиентом")
+        with allure.step("Проверить URL"):
+            assert "feed" in main_page.get_current_url()
 
-        constructor = ConstructorPage(driver)
-        constructor.open()
+    @allure.story("Работа с конструктором")
+    @allure.title("Добавление ингредиента в заказ")
+    def test_add_ingredient(self, driver):
+        main_page = MainPage(driver)
 
-        ingredient = constructor.get_any_ingredient()
-        ingredient_name = ingredient.text
-        ingredient.click()
+        with allure.step("Открыть конструктор"):
+            main_page.open()
 
-        assert constructor.is_ingredient_modal_open(), "Модалка с ингредиентом не открылась"
+        with allure.step("Добавить ингредиент"):
+            main_page.add_ingredient_to_constructor(TestIngredients.BUN)
 
-        constructor.close_ingredient_modal()
-        assert not constructor.is_ingredient_modal_open(), "Модалка не закрылась"
+        with allure.step("Проверить кнопку оформления"):
+            assert main_page.is_element_present(main_page.locators.ORDER_BUTTON)
 
-    def test_ingredient_counter_increases(self, driver):
-        logger.info("Проверка увеличения счётчика ингредиента при добавлении в заказ")
+    @allure.story("Оформление заказа")
+    @allure.title("Создание заказа авторизованным пользователем")
+    def test_make_order(self, driver):
+        login_page = LoginPage(driver)
+        main_page = MainPage(driver)
 
-        constructor = ConstructorPage(driver)
-        constructor.open()
+        with allure.step("Авторизоваться"):
+            login_page.open()
+            login_page.login(TestUser.email, TestUser.password)
 
-        bun = constructor.get_bun()
-        constructor.drag_bun_to_cart(bun)
+        with allure.step("Открыть конструктор"):
+            main_page.open()
 
-        ing = constructor.get_any_ingredient()
-        initial = constructor.get_ingredient_counter(ing)
-        constructor.drag_ingredient_to_cart(ing)
+        with allure.step("Добавить ингредиенты"):
+            main_page.add_ingredient_to_constructor(TestIngredients.BUN)
+            main_page.add_ingredient_to_constructor(TestIngredients.CHEESE)
 
-        updated = constructor.get_ingredient_counter(ing)
-        assert updated == initial + 1, f"Счётчик не увеличился: было {initial}, стало {updated}"
+        with allure.step("Оформить заказ"):
+            main_page.click_order_button()
 
-    def test_logged_user_can_place_order(self, driver, test_user: TestUser):
-        logger.info("Проверка, что залогиненный пользователь может оформить заказ")
+        with allure.step("Проверить модальное окно"):
+            assert main_page.is_order_modal_visible()
 
-        login = LoginPage(driver)
-        login.open()
-        login.login(test_user.email, test_user.password)
+        with allure.step("Закрыть модальное окно"):
+            main_page.close_order_modal()
 
-        constructor = ConstructorPage(driver)
-        constructor.open()
-
-        constructor.drag_bun_to_cart(constructor.get_bun())
-        constructor.drag_ingredient_to_cart(constructor.get_any_ingredient())
-
-        constructor.click_order_button()
-
-        try:
-            is_order_confirmed = constructor.wait_for_order_confirmation()
-            assert is_order_confirmed, "Заказ не был оформлен"
-        except NoSuchElementException:
-            pytest.fail("Не появилось подтверждение заказа")

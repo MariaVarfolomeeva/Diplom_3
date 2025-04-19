@@ -1,8 +1,14 @@
 from selenium.webdriver.common.by import By
 
+
 class LoginPageLocators:
-    LOGIN_BUTTON = (By.XPATH, "//button[@class='login-btn']")
-    EMAIL_INPUT = (By.NAME, "email")
-    PASSWORD_INPUT = (By.NAME, "password")
-    SUBMIT_BUTTON = (By.XPATH, "//button[@type='submit']")
-    ERROR_MESSAGE = (By.CLASS_NAME, "error-message")
+    HEADER = (By.XPATH, "//h1[text()='Вход']")
+    EMAIL_INPUT = (By.XPATH, "//input[@name='email']")
+    PASSWORD_INPUT = (By.XPATH, "//input[@name='password']")
+    SUBMIT_BUTTON = (By.XPATH, "//button[text()='Войти']")
+
+    FORGOT_PASSWORD_LINK = (By.XPATH, "//a[text()='Восстановить пароль']")
+    REGISTER_LINK = (By.XPATH, "//a[text()='Зарегистрироваться']")
+
+    ERROR_MESSAGE = (By.XPATH, "//p[contains(@class, 'input__error')]")
+    SUCCESS_MESSAGE = (By.XPATH, "//div[contains(text(), 'Успешный вход')]")

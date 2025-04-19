@@ -1,46 +1,118 @@
+import allure
 import pytest
-import logging
 from pages.login_page import LoginPage
 from pages.password_recovery_page import PasswordRecoveryPage
-from utils.test_data import recovery_email
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
-
-logger = logging.getLogger(__name__)
+from utils.test_data import TestData
 
 
-
-@pytest.mark.usefixtures("driver_setup")
+@allure.feature("Восстановление пароля")
 class TestPasswordRecovery:
-
+    @allure.story("Переход на страницу восстановления пароля")
     def test_can_open_password_recovery_page(self, driver):
-        logger.info("Тест: переход на страницу восстановления пароля")
-        login = LoginPage(driver)
-        login.click_forgot_password_link()
+        """
+        Тест проверяет корректность перехода на страницу восстановления пароля
+        со страницы логина
+        """
+        with allure.step("Открываем страницу логина"):
+            login_page = LoginPage(driver)
+            login_page.open()
 
-        current_url = driver.current_url
-        assert "reset-password" in current_url, f"Не перешли на страницу восстановления. URL: {current_url}"
+        with allure.step("Кликаем на ссылку 'Забыли пароль?'"):
+            login_page.click_forgot_password_link()
 
-    def test_submit_recovery_email(self, driver):
-        logger.info("Тест: ввод почты и клик по кнопке 'Восстановить'")
-        recovery = PasswordRecoveryPage(driver)
-        recovery.enter_email(recovery_email)
-        recovery.click_recover_button()
+        with allure.step("Проверяем открытие страницы восстановления"):
+            recovery_page = PasswordRecoveryPage(driver)
+            assert recovery_page.is_page_opened(), (
+                f"Ожидался переход на страницу восстановления пароля, "
+                f"но открыт URL: {driver.current_url}"
+            )
 
-        url_after = driver.current_url
-        assert "reset-password" not in url_after, "Похоже, остались на той же странице — возможно, запрос не отправился"
+    @allure.story("Восстановление пароля с валидным email")
+    def test_submit_recovery_form(self, driver):
+        """
+        Тест проверяет отправку формы восстановления пароля
+        с валидным email
+        """
+        with allure.step("Открываем страницу восстановления пароля"):
+            recovery_page = PasswordRecoveryPage(driver)
+            recovery_page.open()
 
-    def test_password_field_becomes_active_when_eye_icon_clicked(self, driver):
-        logger.info("Тест: проверка активации поля при нажатии на иконку 'глаз'")
+        with allure.step("Заполняем email и отправляем форму"):
+            recovery_page.submit_recovery_form(TestData.RECOVERY_EMAIL)
 
-        recovery = PasswordRecoveryPage(driver)
+        with allure.step("Проверяем сообщение об успешной отправке"):
+            assert recovery_page.is_form_submitted(), (
+                "Ожидалось подтверждение отправки ссылки для восстановления"
+            )
 
-        try:
-            recovery.click_eye_icon()
-            password_field = driver.find_element(By.NAME, "password")
-            class_list = password_field.get_attribute("class")
+    @allure.story("Переключение видимости пароля")
+    def test_password_visibility_toggle(self, driver):
+        """
+        Тест проверяет работу кнопки показа/скрытия пароля
+        """
+        with allure.step("Открываем страницу восстановления пароля"):
+            recovery_page = PasswordRecoveryPage(driver)
+            recovery_page.open()
 
-            is_highlighted = "input_status_active" in class_list
-            assert is_highlighted, "Поле пароля не стало активным после клика на 'глаз'"
-        except NoSuchElementException:
-            pytest.fail("Не удалось найти поле пароля или иконку 'глаз'")
+        with allure.step("Проверяем, что пароль скрыт по умолчанию"):
+            assert not recovery_page.is_password_visible(), (
+                "Пароль должен быть скрыт по умолчанию"
+            )
+
+        with allure.step("Нажимаем иконку показа пароля"):
+            recovery_page.toggle_password_visibility()
+
+        with allure.step("Проверяем, что пароль стал видимым"):
+            assert recovery_page.is_password_visible(), (
+                "Пароль должен отображаться после нажатия иконки"
+            )
+
+        with allure.step("Нажимаем иконку скрытия пароля"):
+            recovery_page.toggle_password_visibility()
+
+        with allure.step("Проверяем, что пароль снова скрыт"):
+            assert not recovery_page.is_password_visible(), (
+                "Пароль должен скрыться после повторного нажатия"
+            )
+
+    @allure.story("Восстановление с несуществующим email")
+    def test_recovery_with_invalid_email(self, driver):
+        """
+        Тест проверяет обработку несуществующего email
+        при восстановлении пароля
+        """
+        with allure.step("Открываем страницу восстановления пароля"):
+            recovery_page = PasswordRecoveryPage(driver)
+            recovery_page.open()
+
+        with allure.step("Вводим несуществующий email"):
+            recovery_page.submit_recovery_form(TestData.UNREGISTERED_EMAIL)
+
+        with allure.step("Проверяем сообщение об ошибке"):
+            assert recovery_page.is_error_message_displayed(), (
+                "Ожидалось сообщение об ошибке для несуществующего email"
+            )
+            error_text = recovery_page.get_error_message().lower()
+            assert "не найден" in error_text or "не существует" in error_text, (
+                f"Неожиданное сообщение об ошибке: {error_text}"
+            )
+
+    @allure.story("Переход на страницу входа")
+    def test_login_link_from_recovery_page(self, driver):
+        """
+        Тест проверяет работу ссылки для перехода
+        на страницу входа со страницы восстановления пароля
+        """
+        with allure.step("Открываем страницу восстановления пароля"):
+            recovery_page = PasswordRecoveryPage(driver)
+            recovery_page.open()
+
+        with allure.step("Кликаем на ссылку 'Войти'"):
+            recovery_page.click_login_link()
+
+        with allure.step("Проверяем переход на страницу входа"):
+            login_page = LoginPage(driver)
+            assert login_page.is_page_opened(), (
+                "Ожидался переход на страницу входа после клика по ссылке"
+            )
+

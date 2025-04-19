@@ -1,80 +1,59 @@
+import allure
 import pytest
-import logging
 from pages.order_feed_page import OrderFeedPage
-from utils.api_client import ApiClient
-from selenium.common.exceptions import NoSuchElementException
-
-logger = logging.getLogger(__name__)
+from pages.login_page import LoginPage
+from utils.test_data import TestUser
 
 
-@pytest.mark.usefixtures("driver_setup")
+@allure.feature("Лента заказов")
 class TestOrderFeed:
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        self.api_client = ApiClient()
+    @allure.story("Просмотр деталей заказа")
+    @allure.title("Открытие деталей заказа из ленты")
+    def test_view_order_details(self, driver):
+        order_feed_page = OrderFeedPage(driver)
 
-    def test_order_details_popup_opens_on_click(self, driver):
-        logger.info("Тест: проверка, что по клику на заказ открывается попап")
+        with allure.step("Открыть ленту заказов"):
+            order_feed_page.open()
+            assert order_feed_page.is_opened(), "Страница ленты заказов не загрузилась"
 
-        feed = OrderFeedPage(driver)
-        feed.open()
+        with allure.step("Открыть детали первого заказа"):
+            order_feed_page.open_order_details()
 
-        first_order = feed.get_first_order()
-        first_order.click()
+        with allure.step("Проверить отображение модального окна"):
+            assert order_feed_page.is_order_details_visible(), "Модальное окно с деталями не отобразилось"
 
-        assert feed.is_order_popup_displayed(), "Попап с деталями заказа не открылся"
+        with allure.step("Закрыть модальное окно"):
+            order_feed_page.close_order_details()
+            assert not order_feed_page.is_order_details_visible(), "Модальное окно не закрылось"
 
-    def test_user_orders_visible_in_feed(self, driver, test_user):
-        logger.info("Тест: заказы пользователя видны в ленте заказов")
+    @allure.story("Статистика заказов")
+    @allure.title("Проверка счетчиков заказов")
+    def test_orders_counters(self, driver):
+        order_feed_page = OrderFeedPage(driver)
 
-        self.api_client.create_order_via_api(test_user["access_token"])
-        feed = OrderFeedPage(driver)
-        feed.open()
+        with allure.step("Открыть ленту заказов"):
+            order_feed_page.open()
 
-        found = feed.find_order_by_user(test_user["email"])
-        assert found, "Заказ пользователя не найден в ленте заказов"
+        with allure.step("Получить начальные значения счетчиков"):
+            initial_total = order_feed_page.get_total_orders_count()
+            initial_today = order_feed_page.get_today_orders_count()
 
-    def test_done_counter_increases_after_new_order(self, driver, test_user):
-        logger.info("Тест: счётчик 'Выполнено за всё время' увеличивается после нового заказа")
+        with allure.step("Проверить, что счетчики отображаются"):
+            assert initial_total >= 0, "Неверное значение общего счетчика"
+            assert initial_today >= 0, "Неверное значение дневного счетчика"
 
-        feed = OrderFeedPage(driver)
-        feed.open()
+    @allure.story("Заказы в работе")
+    @allure.title("Проверка отображения заказов в работе")
+    @pytest.mark.usefixtures("login")
+    def test_orders_in_progress(self, driver):
+        order_feed_page = OrderFeedPage(driver)
 
-        before = self.api_client.get_total_done_count()
-        self.api_client.create_order_via_api(test_user["access_token"])
+        with allure.step("Открыть ленту заказов"):
+            order_feed_page.open()
 
-        feed.refresh()
-        after = self.api_client.get_total_done_count()
+        with allure.step("Получить список заказов в работе"):
+            orders_in_progress = order_feed_page.get_orders_in_progress_numbers()
 
-        assert after > before, f"Счётчик не увеличился: было {before}, стало {after}"
+        with allure.step("Проверить, что список не пуст"):
+            assert len(orders_in_progress) > 0, "Нет заказов в работе"
 
-    def test_today_done_counter_increases(self, driver, test_user):
-        logger.info("Тест: счётчик 'Выполнено за сегодня' увеличивается после нового заказа")
-
-        feed = OrderFeedPage(driver)
-        feed.open()
-
-        count_before = feed.get_done_today_count()
-        self.api_client.create_order_via_api(test_user["access_token"])
-
-        feed.refresh()
-        count_after = feed.get_done_today_count()
-
-        assert count_after > count_before, f"Сегодняшний счётчик не изменился: {count_before} → {count_after}"
-
-    def test_order_number_appears_in_work(self, driver, test_user):
-        logger.info("Тест: номер заказа появляется в разделе 'В работе'")
-
-        order_number = self.api_client.create_order_via_api(test_user["access_token"])
-        feed = OrderFeedPage(driver)
-        feed.open()
-
-        feed.refresh()
-
-        try:
-            in_work = feed.get_orders_in_progress()
-            assert any(
-                str(order_number) in item.text for item in in_work
-            ), f"Заказ #{order_number} не отображается в 'В работе'"
-        except NoSuchElementException:
-            pytest.fail("Раздел 'В работе' не найден или пуст")

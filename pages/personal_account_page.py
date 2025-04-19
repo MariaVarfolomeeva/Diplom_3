@@ -1,37 +1,34 @@
-from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from .base_page import BasePage
+from locators.personal_account_page_locators import PersonalAccountLocators
 
 
-class PersonalAccountPage:
-    URL = "https://stellarburgers.nomoreparties.site/account/profile"
+class PersonalAccountPage(BasePage):
+    PATH = "/account/profile"
 
     def __init__(self, driver: WebDriver):
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 10)
+        super().__init__(driver)
+        self.locators = PersonalAccountLocators()
 
-    def open(self):
-        self.driver.get(self.URL)
+    def is_profile_page_opened(self) -> bool:
+        """Проверка, что открыта страница профиля"""
+        return self.is_element_present(self.locators.PROFILE_FORM)
 
-    def is_loaded(self):
-        return self.wait.until(
-            EC.presence_of_element_located((By.XPATH, "//a[contains(@href, '/account/profile') and contains(@class, 'active')]"))
-        )
+    def go_to_order_history(self) -> None:
+        """Перейти в раздел истории заказов"""
+        self.click_element(self.locators.ORDER_HISTORY_LINK)
 
-    def go_to_order_history(self):
-        history_tab = self.wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//a[contains(@href, '/account/orders')]"))
-        )
-        history_tab.click()
+    def is_order_history_active(self) -> bool:
+        """Проверка активности раздела истории заказов"""
+        return "active" in self.driver.find_element(
+            *self.locators.ORDER_HISTORY_LINK
+        ).get_attribute("class")
 
-    def is_order_history_section_active(self):
-        return self.wait.until(
-            EC.presence_of_element_located((By.XPATH, "//a[contains(@href, '/account/orders') and contains(@class, 'active')]"))
-        )
+    def logout(self) -> None:
+        """Выйти из аккаунта"""
+        self.click_element(self.locators.LOGOUT_BUTTON)
 
-    def logout(self):
-        logout_button = self.wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//button[text()='Выход']"))
-        )
-        logout_button.click()
+    def get_order_history_items_count(self) -> int:
+        """Получить количество заказов в истории"""
+        return len(self.driver.find_elements(*self.locators.ORDER_HISTORY_ITEM))
+

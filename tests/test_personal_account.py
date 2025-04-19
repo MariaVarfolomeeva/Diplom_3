@@ -1,53 +1,51 @@
+import allure
 import pytest
-import logging
-from pages.main_page import MainPage
-from pages.login_page import LoginPage
 from pages.personal_account_page import PersonalAccountPage
-from utils.test_data import TestUser
-
-logger = logging.getLogger(__name__)
+from pages.login_page import LoginPage
 
 
-@pytest.mark.usefixtures("driver_setup")
+@allure.feature("Личный кабинет")
 class TestPersonalAccount:
+    @allure.story("Навигация по личному кабинету")
+    @allure.title("Переход в историю заказов")
+    def test_navigate_to_order_history(self, authorized_user):
+        personal_account = PersonalAccountPage(authorized_user)
 
-    def test_go_to_personal_account(self, driver, test_user: TestUser):
-        logger.info("Авторизуемся и переходим в личный кабинет")
+        with allure.step("Открыть страницу личного кабинета"):
+            personal_account.open()
+            assert personal_account.is_profile_page_opened()
 
-        login = LoginPage(driver)
-        login.open()
-        login.login(test_user.email, test_user.password)
+        with allure.step("Перейти в историю заказов"):
+            personal_account.go_to_order_history()
 
-        main = MainPage(driver)
-        main.open()
-        main.click_personal_account()
+        with allure.step("Проверить активность раздела"):
+            assert personal_account.is_order_history_active()
 
-        account_page = PersonalAccountPage(driver)
-        assert account_page.is_loaded(), "Не удалось попасть в личный кабинет"
+    @allure.story("Выход из аккаунта")
+    @allure.title("Корректный выход из системы")
+    def test_logout(self, authorized_user):
+        login_page = LoginPage(authorized_user)
+        personal_account = PersonalAccountPage(authorized_user)
 
-    def test_go_to_order_history(self, driver, test_user: TestUser):
-        logger.info("Переход в раздел 'История заказов' из личного кабинета")
+        with allure.step("Открыть личный кабинет"):
+            personal_account.open()
 
-        login = LoginPage(driver)
-        login.open()
-        login.login(test_user.email, test_user.password)
+        with allure.step("Выйти из аккаунта"):
+            personal_account.logout()
 
-        account_page = PersonalAccountPage(driver)
-        account_page.open()
-        account_page.go_to_order_history()
+        with allure.step("Проверить редирект на страницу логина"):
+            assert login_page.is_opened(), "Не произошел выход из аккаунта"
 
-        assert account_page.is_order_history_section_active(), "Раздел 'История заказов' не активен"
+    @allure.story("История заказов")
+    @allure.title("Проверка отображения истории заказов")
+    def test_order_history_display(self, authorized_user):
+        personal_account = PersonalAccountPage(authorized_user)
 
-    def test_logout(self, driver, test_user: TestUser):
-        logger.info("Выходим из аккаунта через личный кабинет")
+        with allure.step("Открыть историю заказов"):
+            personal_account.open()
+            personal_account.go_to_order_history()
 
-        login = LoginPage(driver)
-        login.open()
-        login.login(test_user.email, test_user.password)
+        with allure.step("Проверить наличие заказов"):
+            assert personal_account.get_order_history_items_count() > 0, "История заказов пуста"
 
-        account_page = PersonalAccountPage(driver)
-        account_page.open()
-        account_page.logout()
 
-        login_page = LoginPage(driver)
-        assert login_page.is_loaded(), "После выхода из аккаунта не попали на страницу логина"

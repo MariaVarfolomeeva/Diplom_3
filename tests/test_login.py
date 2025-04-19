@@ -1,47 +1,61 @@
+import allure
 import pytest
-import logging
-from selenium.webdriver.common.by import By
 from pages.login_page import LoginPage
 from pages.main_page import MainPage
-from utils.test_data import TestData
-
-logger = logging.getLogger(__name__)
+from utils.test_data import TestUser
 
 
-@pytest.mark.usefixtures("driver_setup")
-class TestLoginFlow:
+@allure.feature("Авторизация")
+class TestLogin:
+    @allure.story("Успешный логин")
+    def test_successful_login(self, driver):
+        login_page = LoginPage(driver)
+        main_page = MainPage(driver)
 
-    def test_go_to_login_page_from_main(self, driver):
-        logger.info("Открываем главную страницу и переходим на страницу логина")
-        main = MainPage(driver)
-        main.click_login_link()
+        with allure.step("Открыть страницу логина"):
+            login_page.open()
+            assert login_page.is_opened(), "Страница логина не загрузилась"
 
-        assert "login" in driver.current_url, "Не перешли на страницу входа"
+        with allure.step("Ввести валидные данные"):
+            login_page.login(TestUser.EMAIL, TestUser.PASSWORD)
 
-    def test_login_with_valid_credentials(self, driver):
-        logger.info("Проверяем логин с валидными данными")
-        login_screen = LoginPage(driver)
+        with allure.step("Проверить редирект на главную"):
+            assert main_page.is_opened(), "Авторизация не удалась"
 
-        login_screen.perform_login(TestData.USER_EMAIL, TestData.USER_PASSWORD)
+    @allure.story("Логин с неверным паролем")
+    def test_invalid_password(self, driver):
+        login_page = LoginPage(driver)
 
-        try:
-            driver.find_element(By.XPATH, "//button[text()='Оформить заказ']")
-            success = True
-        except:
-            success = False
+        with allure.step("Ввести неверный пароль"):
+            login_page.open()
+            login_page.login(TestUser.EMAIL, "wrong_password")
 
-        assert success, "Пользователь не авторизован — кнопка оформления заказа не найдена"
+        with allure.step("Проверить сообщение об ошибке"):
+            assert login_page.is_error_visible(), "Ошибка не отобразилась"
+            assert "неверный пароль" in login_page.get_error_message().lower()
 
-    def test_login_with_wrong_password(self, driver):
-        logger.info("Проверяем логин с неверным паролем")
-        login_screen = LoginPage(driver)
+    @allure.story("Переход на страницу восстановления пароля")
+    def test_go_to_password_recovery(self, driver):
+        login_page = LoginPage(driver)
 
-        login_screen.perform_login(TestData.USER_EMAIL, "12345_не_тот_пароль")
+        with allure.step("Кликнуть на 'Забыли пароль?'"):
+            login_page.open()
+            login_page.click_forgot_password_link()
 
-        try:
-            error_msg = driver.find_element(By.CLASS_NAME, "input__error").text
-        except:
-            error_msg = ""
+        with allure.step("Проверить редирект"):
+            assert "forgot-password" in driver.current_url
 
-        assert "неверный" in error_msg.lower(), "Ожидалось сообщение об ошибке логина"
+    @allure.story("Переход на страницу регистрации")
+    @allure.story("Переход на страницу регистрации")
+    def test_go_to_register_page(self, driver):
+        login_page = LoginPage(driver)
+
+        with allure.step("Открыть страницу логина"):
+            login_page.open()
+
+        with allure.step("Кликнуть на ссылку 'Зарегистрироваться'"):
+            login_page.click_register_link()
+
+        with allure.step("Проверить редирект"):
+            assert login_page.is_redirect_to_register(), "Редирект на регистрацию не выполнен"
 

@@ -1,25 +1,54 @@
-from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from .base_page import BasePage
+from locators.password_recovery_page_locators import PasswordRecoveryPageLocators
 
+class PasswordRecoveryPage(BasePage):
+    PATH = "/forgot-password"
 
-class PasswordRecoveryPage:
     def __init__(self, driver: WebDriver):
-        self.driver = driver
+        super().__init__(driver)
+        self.locators = PasswordRecoveryPageLocators()
 
-    EMAIL_INPUT = (By.NAME, "email")
-    RECOVERY_BUTTON = (By.XPATH, "//button[@type='submit']")
-    SHOW_PASSWORD_BUTTON = (By.XPATH, "//button[@class='show-password']")
-    PASSWORD_INPUT = (By.NAME, "password")
+    def is_page_opened(self) -> bool:
+        """Проверка загрузки страницы по заголовку"""
+        return self.is_element_present(self.locators.PAGE_HEADER)
 
-    def open(self):
-        self.driver.get("https://example.com/password-recovery")
+    def submit_recovery_form(self, email: str) -> None:
+        """Заполняет и отправляет форму восстановления пароля"""
+        self.enter_email(email)
+        self.click_recover_button()
 
-    def recover_password(self, email):
-        self.driver.find_element(*self.EMAIL_INPUT).send_keys(email)
-        self.driver.find_element(*self.RECOVERY_BUTTON).click()
+    def enter_email(self, email: str) -> None:
+        """Вводит email в поле восстановления"""
+        self.send_keys(self.locators.EMAIL_INPUT, email)
 
-    def show_password(self):
-        self.driver.find_element(*self.SHOW_PASSWORD_BUTTON).click()
+    def click_recover_button(self) -> None:
+        """Нажимает кнопку 'Восстановить'"""
+        self.click_element(self.locators.RECOVERY_BUTTON)
 
-    def get_password_input_style(self):
-        return self.driver.find_element(*self.PASSWORD_INPUT).get_attribute("style")
+    def is_form_submitted(self) -> bool:
+        """Проверяет успешную отправку формы (появление сообщения)"""
+        return self.is_element_present(self.locators.SUCCESS_MESSAGE)
+
+    def toggle_password_visibility(self) -> None:
+        """Переключает видимость пароля (клик на иконку глаза)"""
+        self.click_element(self.locators.SHOW_PASSWORD_BUTTON)
+
+    def is_password_visible(self) -> bool:
+        """Проверяет, отображается ли пароль (тип поля 'text' вместо 'password')"""
+        return "text" in self.driver.find_element(*self.locators.PASSWORD_INPUT).get_attribute("type")
+
+    def is_error_message_displayed(self) -> bool:
+        """Проверяет наличие сообщения об ошибке"""
+        return self.is_element_present(self.locators.ERROR_MESSAGE)
+
+    def get_error_message(self) -> str:
+        """Возвращает текст ошибки"""
+        return self.driver.find_element(*self.locators.ERROR_MESSAGE).text
+
+    def click_login_link(self) -> None:
+        """Кликает на ссылку 'Войти' для перехода на страницу авторизации"""
+        self.click_element(self.locators.LOGIN_LINK)
+
