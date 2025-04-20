@@ -1,11 +1,13 @@
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from config.urls import Urls
 from .base_page import BasePage
 from locators.password_recovery_page_locators import PasswordRecoveryPageLocators
 
+
 class PasswordRecoveryPage(BasePage):
-    PATH = "/forgot-password"
+    PATH = Urls.FORGOT_PASSWORD
 
     def __init__(self, driver: WebDriver):
         super().__init__(driver)

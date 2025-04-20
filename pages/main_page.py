@@ -2,10 +2,11 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.common.action_chains import ActionChains
 from .base_page import BasePage
 from locators.main_page_locators import MainPageLocators
+from config.urls import Urls
 
 
 class MainPage(BasePage):
-    PATH = "/"
+    PATH = Urls.HOME
 
     def __init__(self, driver: WebDriver):
         super().__init__(driver)
@@ -46,5 +47,3 @@ class MainPage(BasePage):
     def get_current_url(self) -> str:
         """Возвращает текущий URL (инкапсуляция driver.current_url)"""
         return self.driver.current_url
-
-

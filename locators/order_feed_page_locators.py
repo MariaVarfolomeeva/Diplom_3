@@ -9,4 +9,5 @@ class OrderFeedLocators:
     TODAY_ORDERS_COUNT = (By.XPATH, "//p[contains(text(), 'Выполнено за сегодня')]/following-sibling::p")
     ORDERS_IN_PROGRESS = (By.XPATH, "//ul[contains(@class, 'OrderFeed_orderList')]/li")
     CLOSE_MODAL_BUTTON = (By.XPATH, "//button[contains(@class, 'Modal_close')]")
-
+    ORDER_NUMBER_IN_LIST = (By.XPATH, "//p[contains(@class, 'order-number')]")
+    STATS_SECTION = (By.XPATH, "//section[contains(@class, 'order-stats')]")

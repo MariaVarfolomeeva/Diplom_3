@@ -1,10 +1,12 @@
 from selenium.webdriver.remote.webdriver import WebDriver
+from config.urls import Urls
 from .base_page import BasePage
 from locators.personal_account_page_locators import PersonalAccountLocators
 
 
 class PersonalAccountPage(BasePage):
-    PATH = "/account/profile"
+    """Локаторы личного кабинета"""
+    PATH = Urls.ACCOUNT_PROFILE
 
     def __init__(self, driver: WebDriver):
         super().__init__(driver)

@@ -1,12 +1,13 @@
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from config.urls import Urls
 from .base_page import BasePage
 from locators.order_feed_page_locators import OrderFeedLocators
 
 
 class OrderFeedPage(BasePage):
-    PATH = "/feed"
+    PATH = Urls.FEED
 
     def __init__(self, driver: WebDriver):
         super().__init__(driver)
@@ -41,4 +42,3 @@ class OrderFeedPage(BasePage):
         """Получить номера заказов в работе"""
         elements = self.driver.find_elements(*self.locators.ORDERS_IN_PROGRESS)
         return [int(element.text) for element in elements]
-

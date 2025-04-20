@@ -2,10 +2,11 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from config.urls import Urls
 
 
 class BasePage:
-    BASE_URL = "https://stellarburgers.nomoreparties.site"
+    BASE_URL = Urls.BASE
 
     def __init__(self, driver: WebDriver):
         self.driver = driver
