@@ -1,0 +1,16 @@
+base_url: "https://stellarburgers.com"
+timeout: 30
+username: "test_user"
+password: "test_password"
+
+
+browsers:
+  chrome:
+    headless: true
+    options:
+      disable_gpu: true
+      no_sandbox: true
+  firefox:
+    headless: true
+    options:
+      disable_gpu: true
